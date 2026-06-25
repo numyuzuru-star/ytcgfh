@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6.25-26亚太采购峰会 - 幸运转盘</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            animation: fadeInDown 0.8s ease;
+        }
+        .header h1 {
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            letter-spacing: 2px;
+        }
+        .header .subtitle {
+            color: rgba(255,255,255,0.85);
+            font-size: 0.95rem;
+            margin-top: 6px;
+        }
+        .test-badge {
+            display: none;
+            background: #ff6b6b;
+            color: #fff;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 10px;
+            animation: pulse 2s infinite;
+        }
+        .test-badge.show { display: inline-block; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .wheel-container {
+            position: relative;
+            width: 420px;
+            height: 420px;
+            margin: 0 auto 25px;
+            animation: fadeIn 1s ease;
+        }
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3), inset 0 0 20px rgba(0,0,0,0.1);
+            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+        .pointer {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 36px;
+            height: 45px;
+            z-index: 10;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+        }
+        .pointer svg { width: 100%; height: 100%; }
+        .center-circle {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 65px; height: 65px;
+            background: linear-gradient(145deg, #fff, #f5f5f5);
+            border-radius: 50%;
+            z-index: 5;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #667eea;
+            font-weight: bold;
+            border: 3px solid #fff;
+        }
+        .spin-btn {
+            display: block;
+            margin: 0 auto;
+            padding: 15px 55px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+            background: #fff;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            letter-spacing: 4px;
+            animation: fadeInUp 1s ease 0.2s both;
+        }
+        .spin-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.3);
+        }
+        .spin-btn:disabled {
+            background: #ccc;
+            color: #888;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .result-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        .result-modal.show { display: flex; }
+        .result-content {
+            background: #fff;
+            padding: 35px 45px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: scaleIn 0.4s ease;
+        }
+        .result-content .icon { font-size: 55px; margin-bottom: 12px; }
+        .result-content h2 { color: #333; font-size: 1.4rem; margin-bottom: 8px; }
+        .result-content .prize-name {
+            color: #667eea;
+            font-size: 1.6rem;
+            font-weight: bold;
+            margin: 12px 0;
+            padding: 14px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+        .result-content .test-notice {
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            display: none;
+        }
+        .result-content .test-notice.show { display: block; }
+        .result-content .close-btn {
+            margin-top: 18px;
+            padding: 11px 36px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .result-content .close-btn:hover { transform: scale(1.05); }
+        .already-spun {
+            color: rgba(255,255,255,0.9);
+            margin-top: 18px;
+            font-size: 0.9rem;
+            animation: fadeIn 1s ease;
+        }
+        .confetti {
+            position: fixed;
+            width: 10px; height: 10px;
+            top: -10px;
+            animation: confetti-fall 3s linear forwards;
+            z-index: 200;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+        @media (max-width: 480px) {
+            .wheel-container { width: 340px; height: 340px; }
+            .header h1 { font-size: 1.5rem; }
+            .center-circle { width: 55px; height: 55px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>6.25-26亚太采购峰会</h1>
+        <div class="subtitle">幸运大转盘 · 每人限抽一次</div>
+        <div class="test-badge" id="testBadge">【测试模式】不扣减库存</div>
+    </div>
+    <div class="wheel-container">
+        <div class="pointer">
+            <svg viewBox="0 0 40 50" fill="none">
+                <path d="M20 50L0 10C0 4.477 4.477 0 10 0h20c5.523 0 10 4.477 10 10L20 50z" fill="#FF6B6B"/>
+                <path d="M20 45L5 12h30L20 45z" fill="#FF8E8E"/>
+            </svg>
+        </div>
+        <div class="wheel" id="wheel">
+            <canvas id="wheelCanvas" width="840" height="840" style="width:100%;height:100%;"></canvas>
+        </div>
+        <div class="center-circle">GO</div>
+    </div>
+    <button class="spin-btn" id="spinBtn" onclick="spin()">开始抽奖</button>
+    <div class="already-spun" id="alreadySpun" style="display:none;">您已经参与过抽奖了，感谢您的参与！</div>
+    <div class="result-modal" id="resultModal">
+        <div class="result-content">
+            <div class="icon">🎉</div>
+            <h2>恭喜您获得</h2>
+            <div class="prize-name" id="prizeName"></div>
+            <p style="color:#666;font-size:0.85rem;">请截图保存，凭截图领取奖品</p>
+            <div class="test-notice" id="testNotice">⚠️ 测试模式：本次抽奖未扣减库存</div>
+            <button class="close-btn" onclick="closeModal()">确定</button>
+        </div>
+    </div>
+
+    <script>
+        // ========== 配置区域 ==========
+        const API_URL = 'https://wheel-d2gqxo1o03c25766b-1447012317.ap-shanghai.app.tcloudbase.com/drawPrize';
+
+        // 判断是否测试模式
+        const urlParams = new URLSearchParams(window.location.search);
+        const IS_TEST = urlParams.get('test') === '1';
+
+        // 测试模式显示标识
+        if (IS_TEST) {
+            document.getElementById('testBadge').classList.add('show');
+        }
+
+        // 奖品配置
+        const prizes = [
+            { name: "小风扇", weight: 15, color: "#FF6B6B", textColor: "#fff" },
+            { name: "蓝色本子", weight: 25, color: "#4ECDC4", textColor: "#fff" },
+            { name: "笔记本书签套装", weight: 12, color: "#45B7D1", textColor: "#fff" },
+            { name: "合合杜邦纸袋", weight: 50, color: "#96CEB4", textColor: "#fff" },
+            { name: "扫描全能王+名片全能王+启信宝VIP", weight: 245, color: "#FFEAA7", textColor: "#333" }
+        ];
+
+        const totalWeight = prizes.reduce((sum, p) => sum + p.weight, 0);
+        let currentAngle = 0;
+        const prizeAngles = prizes.map(p => {
+            const angle = (p.weight / totalWeight) * 360;
+            const start = currentAngle;
+            currentAngle += angle;
+            return { ...p, startAngle: start, endAngle: currentAngle, sectorAngle: angle };
+        });
+
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = canvas.width / 2 - 12;
+
+        let isSpinning = false;
+        let currentRotation = 0;
+
+        // 检查是否已抽过（正式模式）
+        const storageKey = IS_TEST ? 'wheel_spun_62526_test' : 'wheel_spun_62526';
+        const hasSpun = localStorage.getItem(storageKey);
+
+        if (hasSpun && !IS_TEST) {
+            document.getElementById('spinBtn').disabled = true;
+            document.getElementById('spinBtn').textContent = '已抽奖';
+            document.getElementById('alreadySpun').style.display = 'block';
+        }
+
+        // 统一的切线方向文字绘制函数
+        function drawTangentText(prize, midAngle, textRadius) {
+            const midRad = (midAngle - 90) * Math.PI / 180;
+            const textX = centerX + Math.cos(midRad) * textRadius;
+            const textY = centerY + Math.sin(midRad) * textRadius;
+
+            ctx.save();
+            ctx.translate(textX, textY);
+
+            let tangentAngle;
+            if (midAngle < 180) {
+                tangentAngle = midAngle + 90;
+            } else {
+                tangentAngle = midAngle - 90;
+            }
+            if (tangentAngle > 90 && tangentAngle < 270) {
+                tangentAngle += 180;
+                if (tangentAngle >= 360) tangentAngle -= 360;
+            }
+
+            ctx.rotate(tangentAngle * Math.PI / 180);
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            let fontSize = Math.min(28, Math.max(14, prize.sectorAngle * 0.55));
+            ctx.font = `bold ${fontSize}px sans-serif`;
+            ctx.fillStyle = prize.textColor;
+
+            const words = prize.name.split('+');
+            if (words.length > 1 && prize.sectorAngle >= 20) {
+                const lineHeight = fontSize * 1.3;
+                words.forEach((word, i) => {
+                    ctx.fillText(word, 0, (i - (words.length - 1) / 2) * lineHeight);
+                });
+            } else {
+                ctx.fillText(prize.name, 0, 0);
+            }
+
+            ctx.restore();
+        }
+
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            prizeAngles.forEach(prize => {
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                const startRad = (prize.startAngle - 90) * Math.PI / 180;
+                const endRad = (prize.endAngle - 90) * Math.PI / 180;
+                ctx.arc(centerX, centerY, radius, startRad, endRad);
+                ctx.closePath();
+                ctx.fillStyle = prize.color;
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,0.6)";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                const midAngle = (prize.startAngle + prize.endAngle) / 2;
+
+                if (prize.sectorAngle >= 70) {
+                    const midRad = (midAngle - 90) * Math.PI / 180;
+                    const textRadius = radius * 0.55;
+                    const textX = centerX + Math.cos(midRad) * textRadius;
+                    const textY = centerY + Math.sin(midRad) * textRadius;
+
+                    ctx.save();
+                    ctx.translate(textX, textY);
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    let fontSize = 32;
+                    ctx.font = `bold ${fontSize}px sans-serif`;
+                    ctx.fillStyle = prize.textColor;
+                    const words = prize.name.split('+');
+                    const lineHeight = fontSize * 1.5;
+                    words.forEach((word, i) => {
+                        ctx.fillText(word, 0, (i - (words.length - 1) / 2) * lineHeight);
+                    });
+                    ctx.restore();
+                } else {
+                    const textRadius = radius * 0.62;
+                    drawTangentText(prize, midAngle, textRadius);
+                }
+            });
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 58, 0, Math.PI * 2);
+            ctx.fillStyle = "#fff";
+            ctx.fill();
+            ctx.strokeStyle = "#e8e8e8";
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        }
+
+        drawWheel();
+
+        async function spin() {
+            if (isSpinning) return;
+            if (!IS_TEST && localStorage.getItem(storageKey)) return;
+
+            isSpinning = true;
+            const btn = document.getElementById('spinBtn');
+            btn.disabled = true;
+            btn.textContent = '抽奖中...';
+
+            let selectedPrize = null;
+
+            if (IS_TEST) {
+                // ===== 测试模式：本地随机，不调用云函数 =====
+                const random = Math.random() * totalWeight;
+                let accumulated = 0;
+
+                for (let i = 0; i < prizeAngles.length; i++) {
+                    accumulated += prizeAngles[i].weight;
+                    if (random <= accumulated) {
+                        selectedPrize = prizeAngles[i];
+                        break;
+                    }
+                }
+
+                // 测试模式可以重复抽，所以不永久禁用按钮
+                setTimeout(() => {
+                    isSpinning = false;
+                    btn.disabled = false;
+                    btn.textContent = '开始抽奖';
+
+                    showResult(selectedPrize.name, true);
+                }, 4200);
+
+            } else {
+                // ===== 正式模式：调用云函数 =====
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await response.json();
+
+                    if (!result.success) {
+                        throw new Error(result.error || '抽奖失败');
+                    }
+
+                    selectedPrize = prizeAngles.find(p => p.name === result.prize);
+                    if (!selectedPrize) {
+                        throw new Error('奖品数据异常');
+                    }
+
+                    setTimeout(() => {
+                        isSpinning = false;
+                        localStorage.setItem(storageKey, 'true');
+                        localStorage.setItem('wheel_prize_62526', selectedPrize.name);
+
+                        btn.textContent = '已抽奖';
+                        document.getElementById('alreadySpun').style.display = 'block';
+
+                        showResult(selectedPrize.name, false);
+                    }, 4200);
+
+                } catch (err) {
+                    isSpinning = false;
+                    btn.disabled = false;
+                    btn.textContent = '开始抽奖';
+                    alert('抽奖出错：' + err.message);
+                    return;
+                }
+            }
+
+            // 执行转盘动画
+            const midAngle = (selectedPrize.startAngle + selectedPrize.endAngle) / 2;
+            const targetRotation = 360 - midAngle + 90 + (Math.random() * selectedPrize.sectorAngle - selectedPrize.sectorAngle / 2);
+            const extraSpins = 5 + Math.floor(Math.random() * 3);
+            const finalRotation = currentRotation + extraSpins * 360 + targetRotation;
+
+            const wheel = document.getElementById('wheel');
+            wheel.style.transform = `rotate(${finalRotation}deg)`;
+            currentRotation = finalRotation;
+        }
+
+        function showResult(prizeName, isTest) {
+            document.getElementById('prizeName').textContent = prizeName;
+
+            if (isTest) {
+                document.getElementById('testNotice').classList.add('show');
+            } else {
+                document.getElementById('testNotice').classList.remove('show');
+            }
+
+            document.getElementById('resultModal').classList.add('show');
+            createConfetti();
+        }
+
+        function closeModal() {
+            document.getElementById('resultModal').classList.remove('show');
+        }
+
+        function createConfetti() {
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                document.body.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 4000);
+            }
+        }
+
+        document.getElementById('resultModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+</body>
+</html>
