@@ -379,21 +379,32 @@
         drawWheel();
 
         // 计算转盘转到指定奖品的角度
+        // 指针在顶部（-90度，即270度位置）
+        // 转盘顺时针旋转，要让指定奖品的中间停在指针位置
         function calculateRotation(prizeName) {
             const prize = prizeAngles.find(p => p.name === prizeName);
             if (!prize) return 0;
 
-            // 计算该奖品扇区的中间角度
+            // 计算该奖品扇区的中间角度（从0度开始顺时针）
             const midAngle = (prize.startAngle + prize.endAngle) / 2;
 
-            // 指针在顶部（-90度位置），需要转到让该扇区中间指向顶部
-            // 目标角度 = 360 - midAngle + 90
+            // 指针在顶部，对应角度是 -90度（或270度）
+            // 转盘需要旋转的角度 = 让midAngle转到-90度位置
+            // 即：旋转角度 = -90 - midAngle = 270 - midAngle
+            // 但我们要顺时针旋转，所以是 360 - midAngle + 90 = 450 - midAngle
+            // 简化：targetAngle = 360 - midAngle + 90
+
+            // 为了让指针指向扇区中间，需要让转盘旋转使midAngle对准顶部（-90度）
+            // 转盘顺时针旋转，所以旋转角度 = 当前角度 + (360 - midAngle + 90)
+            // 但我们要的是绝对旋转角度
+
             const targetAngle = 360 - midAngle + 90;
 
             // 加上多圈旋转（5-8圈）
             const extraSpins = 5 + Math.floor(Math.random() * 3);
 
-            // 加上当前已旋转的角度，确保一直往同一个方向转
+            // 最终旋转角度 = 当前已旋转角度 + 额外圈数 + 目标角度
+            // 这样确保一直顺时针旋转
             const finalRotation = currentRotation + extraSpins * 360 + targetAngle;
 
             return finalRotation;
