@@ -384,14 +384,23 @@
         drawWheel();
 
         // 计算转盘转到指定奖品的角度
+        // 转盘均匀分布，每个奖品占72度
+        // 指针在顶部（270度），要让指定奖品的中间对准指针
         function calculateRotation(prizeName) {
             const prize = prizeAngles.find(p => p.name === prizeName);
             if (!prize) return 0;
 
+            // 该奖品在均匀分布中的中间角度
             const midAngle = (prize.startAngle + prize.endAngle) / 2;
+
+            // 指针在顶部对应270度
+            // 要让midAngle转到顶部，旋转角度 = 270 - midAngle
             const targetAngle = 270 - midAngle;
 
+            // 加上多圈旋转（5-8圈）
             const extraSpins = 5 + Math.floor(Math.random() * 3);
+
+            // 最终旋转角度
             const finalRotation = currentRotation + extraSpins * 360 + targetAngle;
 
             return finalRotation;
