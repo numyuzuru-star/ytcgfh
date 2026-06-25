@@ -246,7 +246,7 @@
             document.getElementById('testBadge').classList.add('show');
         }
 
-        // 奖品配置
+        // 奖品配置（显示用，均匀分布）
         const prizes = [
             { name: "小风扇", weight: 15, color: "#FF6B6B", textColor: "#fff" },
             { name: "蓝色本子", weight: 25, color: "#4ECDC4", textColor: "#fff" },
@@ -255,13 +255,18 @@
             { name: "扫描全能王+名片全能王+启信宝VIP", weight: 245, color: "#FFEAA7", textColor: "#333" }
         ];
 
+        // 抽奖用权重（实际概率）
         const totalWeight = prizes.reduce((sum, p) => sum + p.weight, 0);
+
+        // 显示用：均匀分布，每个奖品占 360/5 = 72度
+        const displayCount = prizes.length;
+        const sectorAngle = 360 / displayCount;
+
         let currentAngle = 0;
-        const prizeAngles = prizes.map(p => {
-            const angle = (p.weight / totalWeight) * 360;
-            const start = currentAngle;
-            currentAngle += angle;
-            return { ...p, startAngle: start, endAngle: currentAngle, sectorAngle: angle };
+        const prizeAngles = prizes.map((p, index) => {
+            const start = index * sectorAngle;
+            const end = (index + 1) * sectorAngle;
+            return { ...p, startAngle: start, endAngle: end, sectorAngle: sectorAngle };
         });
 
         const canvas = document.getElementById('wheelCanvas');
@@ -307,12 +312,12 @@
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
 
-            let fontSize = Math.min(28, Math.max(14, prize.sectorAngle * 0.55));
+            let fontSize = Math.min(28, Math.max(16, prize.sectorAngle * 0.4));
             ctx.font = `bold ${fontSize}px sans-serif`;
             ctx.fillStyle = prize.textColor;
 
             const words = prize.name.split('+');
-            if (words.length > 1 && prize.sectorAngle >= 20) {
+            if (words.length > 1) {
                 const lineHeight = fontSize * 1.3;
                 words.forEach((word, i) => {
                     ctx.fillText(word, 0, (i - (words.length - 1) / 2) * lineHeight);
@@ -379,28 +384,14 @@
         drawWheel();
 
         // 计算转盘转到指定奖品的角度
-        // 关键修正：
-        // Canvas绘制时，0度在右边(3点钟)，角度顺时针增加
-        // 但arc()的起始角度是-90度（顶部）
-        // 所以prizeAngles中的角度是：从顶部(-90度)开始顺时针计算
-        // 
-        // 指针固定在顶部
-        // 要让midAngle对应的扇区停在指针位置
-        // 需要旋转的角度 = 270 - midAngle（因为顶部是270度）
         function calculateRotation(prizeName) {
             const prize = prizeAngles.find(p => p.name === prizeName);
             if (!prize) return 0;
 
             const midAngle = (prize.startAngle + prize.endAngle) / 2;
-
-            // 顶部对应270度（或-90度）
-            // 要让midAngle转到顶部，需要旋转：270 - midAngle
             const targetAngle = 270 - midAngle;
 
-            // 加上多圈旋转（5-8圈）
             const extraSpins = 5 + Math.floor(Math.random() * 3);
-
-            // 最终旋转角度
             const finalRotation = currentRotation + extraSpins * 360 + targetAngle;
 
             return finalRotation;
@@ -418,19 +409,18 @@
             let selectedPrizeName = null;
 
             if (IS_TEST) {
-                // ===== 测试模式：本地随机，不调用云函数 =====
+                // ===== 测试模式：按权重随机，不调用云函数 =====
                 const random = Math.random() * totalWeight;
                 let accumulated = 0;
 
-                for (let i = 0; i < prizeAngles.length; i++) {
-                    accumulated += prizeAngles[i].weight;
+                for (let i = 0; i < prizes.length; i++) {
+                    accumulated += prizes[i].weight;
                     if (random <= accumulated) {
-                        selectedPrizeName = prizeAngles[i].name;
+                        selectedPrizeName = prizes[i].name;
                         break;
                     }
                 }
 
-                // 计算转盘角度（确保指向正确的奖品）
                 const finalRotation = calculateRotation(selectedPrizeName);
 
                 const wheel = document.getElementById('wheel');
@@ -446,7 +436,7 @@
                 }, 4200);
 
             } else {
-                // ===== 正式模式：先调用云函数获取结果，再转转盘 =====
+                // ===== 正式模式：调用云函数 =====
                 try {
                     const response = await fetch(API_URL, {
                         method: 'POST',
@@ -460,7 +450,6 @@
 
                     selectedPrizeName = result.prize;
 
-                    // 计算转盘角度（确保指向云函数返回的奖品）
                     const finalRotation = calculateRotation(selectedPrizeName);
 
                     const wheel = document.getElementById('wheel');
