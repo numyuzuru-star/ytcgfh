@@ -200,6 +200,7 @@
             .center-circle { width: 55px; height: 55px; font-size: 12px; }
         }
     </style>
+<base target="_blank">
 </head>
 <body>
     <div class="header">
@@ -377,6 +378,27 @@
 
         drawWheel();
 
+        // 计算转盘转到指定奖品的角度
+        function calculateRotation(prizeName) {
+            const prize = prizeAngles.find(p => p.name === prizeName);
+            if (!prize) return 0;
+
+            // 计算该奖品扇区的中间角度
+            const midAngle = (prize.startAngle + prize.endAngle) / 2;
+
+            // 指针在顶部（-90度位置），需要转到让该扇区中间指向顶部
+            // 目标角度 = 360 - midAngle + 90
+            const targetAngle = 360 - midAngle + 90;
+
+            // 加上多圈旋转（5-8圈）
+            const extraSpins = 5 + Math.floor(Math.random() * 3);
+
+            // 加上当前已旋转的角度，确保一直往同一个方向转
+            const finalRotation = currentRotation + extraSpins * 360 + targetAngle;
+
+            return finalRotation;
+        }
+
         async function spin() {
             if (isSpinning) return;
             if (!IS_TEST && localStorage.getItem(storageKey)) return;
@@ -386,7 +408,7 @@
             btn.disabled = true;
             btn.textContent = '抽奖中...';
 
-            let selectedPrize = null;
+            let selectedPrizeName = null;
 
             if (IS_TEST) {
                 // ===== 测试模式：本地随机，不调用云函数 =====
@@ -396,22 +418,28 @@
                 for (let i = 0; i < prizeAngles.length; i++) {
                     accumulated += prizeAngles[i].weight;
                     if (random <= accumulated) {
-                        selectedPrize = prizeAngles[i];
+                        selectedPrizeName = prizeAngles[i].name;
                         break;
                     }
                 }
 
-                // 测试模式可以重复抽，所以不永久禁用按钮
+                // 计算转盘角度（确保指向正确的奖品）
+                const finalRotation = calculateRotation(selectedPrizeName);
+
+                const wheel = document.getElementById('wheel');
+                wheel.style.transform = `rotate(${finalRotation}deg)`;
+                currentRotation = finalRotation;
+
                 setTimeout(() => {
                     isSpinning = false;
                     btn.disabled = false;
                     btn.textContent = '开始抽奖';
 
-                    showResult(selectedPrize.name, true);
+                    showResult(selectedPrizeName, true);
                 }, 4200);
 
             } else {
-                // ===== 正式模式：调用云函数 =====
+                // ===== 正式模式：先调用云函数获取结果，再转转盘 =====
                 try {
                     const response = await fetch(API_URL, {
                         method: 'POST',
@@ -423,20 +451,24 @@
                         throw new Error(result.error || '抽奖失败');
                     }
 
-                    selectedPrize = prizeAngles.find(p => p.name === result.prize);
-                    if (!selectedPrize) {
-                        throw new Error('奖品数据异常');
-                    }
+                    selectedPrizeName = result.prize;
+
+                    // 计算转盘角度（确保指向云函数返回的奖品）
+                    const finalRotation = calculateRotation(selectedPrizeName);
+
+                    const wheel = document.getElementById('wheel');
+                    wheel.style.transform = `rotate(${finalRotation}deg)`;
+                    currentRotation = finalRotation;
 
                     setTimeout(() => {
                         isSpinning = false;
                         localStorage.setItem(storageKey, 'true');
-                        localStorage.setItem('wheel_prize_62526', selectedPrize.name);
+                        localStorage.setItem('wheel_prize_62526', selectedPrizeName);
 
                         btn.textContent = '已抽奖';
                         document.getElementById('alreadySpun').style.display = 'block';
 
-                        showResult(selectedPrize.name, false);
+                        showResult(selectedPrizeName, false);
                     }, 4200);
 
                 } catch (err) {
@@ -447,16 +479,6 @@
                     return;
                 }
             }
-
-            // 执行转盘动画
-            const midAngle = (selectedPrize.startAngle + selectedPrize.endAngle) / 2;
-            const targetRotation = 360 - midAngle + 90 + (Math.random() * selectedPrize.sectorAngle - selectedPrize.sectorAngle / 2);
-            const extraSpins = 5 + Math.floor(Math.random() * 3);
-            const finalRotation = currentRotation + extraSpins * 360 + targetRotation;
-
-            const wheel = document.getElementById('wheel');
-            wheel.style.transform = `rotate(${finalRotation}deg)`;
-            currentRotation = finalRotation;
         }
 
         function showResult(prizeName, isTest) {
